@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rootkit — Atlas de Ameaças Cibernéticas</title>
+    <meta
+      name="description"
+      content="O que é um rootkit, como ele oculta sua presença do sistema operacional, o caso real da Sony BMG, e como detectar, prevenir e responder a esse tipo de ataque."
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+
+  <body>
+    <div class="accent-bar"></div>
+    <header class="site-header">
+      <a class="brand" href="../index.html">Atlas de Ameaças Cibernéticas</a>
+      <nav aria-label="Ameaças da dupla 06">
+        <a href="rootkit.html" aria-current="page">Rootkit</a>
+        <a href="bootkit.html">Bootkit</a>
+      </nav>
+    </header>
+
+    <header class="hero">
+      <span class="badge">Dupla 06 — Ameaça 1</span>
+      <h1>Rootkit</h1>
+      <p class="lede">
+        O malware que não tenta se esconder de você — ele engana o próprio
+        sistema operacional para que ele minta sobre o que está rodando.
+      </p>
+      <p class="see-also">
+        Compare com o <a href="bootkit.html">bootkit</a>, a segunda ameaça da
+        dupla.
+      </p>
+
+      <nav class="quicknav" aria-label="Nesta página">
+        <a href="#conceito">Conceito</a>
+        <a href="#historico">Histórico</a>
+        <a href="#funcionamento">Funcionamento</a>
+        <a href="#vetores">Vetores</a>
+        <a href="#impactos">Impactos</a>
+        <a href="#deteccao">Detecção</a>
+        <a href="#exemplo">Exemplo real</a>
+        <a href="#prevencao">Prevenção</a>
+        <a href="#resposta">Resposta</a>
+        <a href="#diagrama">Diagrama</a>
+        <a href="#referencias">Referências</a>
+      </nav>
+    </header>
+
+    <main>
+      <section id="conceito">
+        <h2>O que é um rootkit</h2>
+        <p>
+          Um <strong>rootkit</strong> é um conjunto de ferramentas desenvolvido
+          para conceder acesso não autorizado, com privilégios elevados (nível
+          <em>root</em> ou <em>administrator</em>), mantendo sua presença e
+          atividade ativamente ocultas do sistema operacional, de
+          administradores e de softwares de segurança.
+        </p>
+        <p>
+          O nome vem da junção de "root" — o usuário com privilégios máximos em
+          ambientes Unix/Linux — com "kit", um conjunto de ferramentas. É essa
+          combinação que define o comportamento: não é só um malware que se
+          esconde, é um malware que
+          <strong>reescreve o que o sistema relata sobre si mesmo</strong>.
+        </p>
+      </section>
+
+      <section id="historico">
+        <h2>Da administração de sistemas ao kernel</h2>
+        <ul class="timeline">
+          <li>
+            <span class="year">Anos 1990</span>
+            <p>
+              Os primeiros rootkits surgem como ferramentas administrativas
+              legítimas em sistemas Unix, usadas para gerenciar permissões. Em
+              meados da década, atores maliciosos adaptam essas mesmas
+              ferramentas para ocultar acessos indevidos e esconder arquivos e
+              binários.
+            </p>
+          </li>
+          <li>
+            <span class="year">Anos 2000</span>
+            <p>
+              Os rootkits migram do espaço do usuário para o kernel, tornando a
+              detecção por antivírus tradicionais muito mais difícil.
+            </p>
+          </li>
+          <li>
+            <span class="year">Década atual</span>
+            <p>
+              O cenário se divide em duas frentes: no Linux, rootkits abusam da
+              tecnologia <strong>eBPF</strong> para interceptar chamadas de
+              sistema sem precisar carregar módulos de kernel tradicionais; no
+              Windows, a técnica <strong>BYOVD</strong> (<em
+                >Bring Your Own Vulnerable Driver</em
+              >) carrega drivers legítimos e assinados, mas vulneráveis, para
+              desligar EDRs e antivírus diretamente do kernel.
+            </p>
+          </li>
+        </ul>
+      </section>
+
+      <section id="funcionamento">
+        <h2>Como o rootkit engana o sistema</h2>
+        <p class="dim">
+          O mecanismo central é a interceptação: o rootkit se posiciona entre o
+          pedido de informação e a resposta do sistema, e filtra o que passa.
+        </p>
+        <ol class="steps">
+          <li>
+            <strong>Um comando de auditoria é executado</strong>Um administrador
+            roda algo como <code>ps</code>, <code>ls</code> ou abre o
+            Gerenciador de Tarefas para checar o que está em execução.
+          </li>
+          <li>
+            <strong>A chamada de sistema é interceptada</strong>O rootkit faz
+            <em>hooking</em> da chamada (por exemplo, <code>getdents64</code>),
+            inserindo-se no caminho entre o pedido e a resposta do kernel.
+          </li>
+          <li>
+            <strong>A resposta é filtrada</strong>Processos, arquivos, portas e
+            chaves de registro do próprio rootkit são removidos da lista antes
+            de ela chegar ao administrador.
+          </li>
+          <li>
+            <strong>O sistema devolve uma "falsa sensação de limpeza"</strong>A
+            auditoria não encontra nada de errado — não porque nada está errado,
+            mas porque a própria fonte da informação foi comprometida.
+          </li>
+        </ol>
+        <p style="margin-top: 1.2rem">
+          Em ataques do tipo BYOVD, essa lógica se estende ao próprio kernel: o
+          malware cria um canal com um driver vulnerável já instalado e envia
+          comandos que forçam esse driver a encerrar processos de segurança — o
+          EDR é desligado por um componente que, tecnicamente, é assinado e
+          confiável.
+        </p>
+      </section>
+
+      <section id="vetores">
+        <h2>Como ele chega até a máquina</h2>
+        <ul>
+          <li>
+            <strong>Phishing e engenharia social:</strong> anexos ou scripts de
+            instalação disfarçados induzem a execução do malware.
+          </li>
+          <li>
+            <strong>Exploração de vulnerabilidades:</strong> falhas em sistemas
+            ou aplicações desatualizadas expostas à internet.
+          </li>
+          <li>
+            <strong>Ataques à cadeia de suprimentos:</strong> dependências
+            maliciosas injetadas em scripts de compilação — como já ocorreu no
+            envenenamento de pacotes do AUR, no Arch Linux.
+          </li>
+          <li>
+            <strong>Dispositivos USB infectados</strong>, deixados
+            propositalmente em locais públicos ou corporativos.
+          </li>
+          <li>
+            <strong>Softwares piratas e ativadores "cracked"</strong>, uma porta
+            de entrada recorrente em máquinas domésticas.
+          </li>
+        </ul>
+      </section>
+
+      <section id="impactos">
+        <h2>O que está em jogo</h2>
+        <p>
+          Um rootkit não é perigoso só pelo que faz — é perigoso porque
+          compromete a fonte que diria que algo está errado.
+        </p>
+        <div class="pillars">
+          <div class="pillar">
+            <h4>Confidencialidade</h4>
+            <p>
+              Captura silenciosa de senhas, chaves privadas e teclas digitadas
+              (<em>keylogging</em>), sem qualquer alerta visível.
+            </p>
+          </div>
+          <div class="pillar">
+            <h4>Integridade</h4>
+            <p>
+              O sistema passa a reportar informações falsificadas sobre si mesmo
+              — a telemetria em que os próprios defensores confiam deixa de ser
+              confiável.
+            </p>
+          </div>
+          <div class="pillar">
+            <h4>Disponibilidade</h4>
+            <p>
+              O acesso oculto é usado para implantar ransomware, mineradores de
+              criptomoeda ou incluir a máquina em uma botnet.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="deteccao">
+        <h2>Sinais que podem indicar comprometimento</h2>
+        <div class="panel defense">
+          <span class="label">Indicadores de detecção</span>
+          <ul style="margin-bottom: 0">
+            <li>
+              <strong>Forense de memória volátil (RAM):</strong> dumps de
+              memória analisados estatisticamente revelam DLLs,
+              <em>handles</em> e injeções que a interface normal do sistema não
+              mostra.
+            </li>
+            <li>
+              <strong>Anomalias temporais:</strong> pequenos atrasos nas
+              chamadas de sistema, medidos com <em>probes</em> de eBPF, podem
+              denunciar rotinas ocultas sendo executadas no meio do caminho.
+            </li>
+            <li>
+              <strong>Auditoria direta:</strong> verificação de módulos
+              carregados (<code>lsmod</code>) e inspeção de <code>/proc</code> e
+              <code>/sys</code>, que às vezes revelam inconsistências que os
+              comandos padrão escondem.
+            </li>
+            <li>
+              <strong>Varredura fora do ambiente infectado</strong>, como o
+              Microsoft Defender Offline, que audita o disco sem depender do
+              sistema potencialmente comprometido.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="exemplo">
+        <h2>Estudo de caso: o rootkit da Sony BMG (2005)</h2>
+        <p>
+          Em 2005, a gravadora <strong>Sony BMG</strong> distribuiu cerca de 50
+          títulos de CDs de música contendo um software de proteção contra cópia
+          (DRM) que instalava um rootkit automaticamente, sem consentimento, ao
+          inserir o disco em um computador Windows.
+        </p>
+        <p>
+          O rootkit ocultava qualquer arquivo cujo nome começasse com um padrão
+          específico usado pelo próprio DRM. Cibercriminosos perceberam a brecha
+          rapidamente e passaram a nomear seus próprios vírus com esse mesmo
+          padrão — usando a infraestrutura da Sony para esconder malware de
+          terceiros no Windows de milhões de usuários.
+        </p>
+        <p class="dim">
+          O episódio terminou em processos judiciais, recall de CDs e um dano
+          reputacional duradouro — um lembrete de que rootkits nem sempre chegam
+          por um ataque: às vezes vêm embutidos em software legítimo.
+        </p>
+      </section>
+
+      <section id="prevencao">
+        <h2>Como reduzir o risco</h2>
+        <ul>
+          <li>
+            <strong>Princípio do menor privilégio:</strong> limitar quem tem
+            acesso administrativo reduz a superfície para instalação de módulos
+            de kernel.
+          </li>
+          <li>
+            <strong>Autenticação multifator</strong>, dificultando o uso de
+            credenciais roubadas como porta de entrada.
+          </li>
+          <li>
+            <strong>Bloqueio de drivers vulneráveis conhecidos</strong>,
+            mitigando diretamente a técnica BYOVD.
+          </li>
+          <li>
+            <strong>Desativação de execução automática (autorun)</strong> em
+            mídias USB.
+          </li>
+          <li>
+            <strong>Manter sistemas e aplicações atualizados</strong>, reduzindo
+            as vulnerabilidades exploráveis como porta de entrada inicial.
+          </li>
+        </ul>
+      </section>
+
+      <section id="resposta">
+        <h2>Se o pior acontecer</h2>
+        <div class="panel threat">
+          <span class="label">Resposta a incidente</span>
+          <p>
+            <strong>Isolar a máquina da rede imediatamente</strong> e preservar
+            a memória RAM antes de qualquer reinicialização, para viabilizar a
+            análise forense.
+          </p>
+          <p style="margin-bottom: 0">
+            Se a infecção atingiu o nível de kernel, a remoção simples por
+            antivírus pode falhar — ou até acionar rotinas destrutivas do
+            próprio malware. O caminho mais seguro costuma ser a reinstalação
+            completa do sistema a partir de mídia externa confiável.
+          </p>
+        </div>
+      </section>
+
+      <section id="diagrama">
+        <h2>O que o administrador vê × o que está de fato acontecendo</h2>
+        <figure>
+          <svg
+            viewBox="0 0 720 190"
+            xmlns="http://www.w3.org/2000/svg"
+            role="img"
+            aria-labelledby="diagTitle diagDesc"
+          >
+            <title id="diagTitle">
+              Diagrama do processo de interceptação de um rootkit
+            </title>
+            <desc id="diagDesc">
+              Um comando de auditoria é enviado ao kernel, interceptado e
+              filtrado pelo rootkit, e retorna ao administrador uma lista
+              adulterada.
+            </desc>
+
+            <rect
+              x="20"
+              y="65"
+              width="140"
+              height="60"
+              rx="4"
+              fill="#ffffff"
+              stroke="#dfe2e8"
+            />
+            <text
+              x="90"
+              y="90"
+              text-anchor="middle"
+              fill="#16181d"
+              font-family="Inter, sans-serif"
+              font-size="12"
+              font-weight="600"
+            >
+              Administrador
+            </text>
+            <text
+              x="90"
+              y="107"
+              text-anchor="middle"
+              fill="#5b6472"
+              font-family="Inter, sans-serif"
+              font-size="11"
+            >
+              executa "ps" / "ls"
+            </text>
+
+            <rect
+              x="290"
+              y="20"
+              width="150"
+              height="60"
+              rx="4"
+              fill="#fbf0ed"
+              stroke="#b3492f"
+            />
+            <text
+              x="365"
+              y="45"
+              text-anchor="middle"
+              fill="#b3492f"
+              font-family="Inter, sans-serif"
+              font-size="11"
+              font-weight="600"
+            >
+              Hooking do rootkit
+            </text>
+            <text
+              x="365"
+              y="61"
+              text-anchor="middle"
+              fill="#b3492f"
+              font-family="Inter, sans-serif"
+              font-size="10"
+            >
+              filtra PIDs e arquivos
+            </text>
+            <text
+              x="365"
+              y="75"
+              text-anchor="middle"
+              fill="#c17155"
+              font-family="Inter, sans-serif"
+              font-size="10"
+            >
+              antes da resposta
+            </text>
+
+            <rect
+              x="290"
+              y="110"
+              width="150"
+              height="60"
+              rx="4"
+              fill="#ffffff"
+              stroke="#dfe2e8"
+            />
+            <text
+              x="365"
+              y="135"
+              text-anchor="middle"
+              fill="#16181d"
+              font-family="Inter, sans-serif"
+              font-size="12"
+              font-weight="600"
+            >
+              Kernel
+            </text>
+            <text
+              x="365"
+              y="152"
+              text-anchor="middle"
+              fill="#5b6472"
+              font-family="Inter, sans-serif"
+              font-size="11"
+            >
+              processa a chamada real
+            </text>
+
+            <rect
+              x="560"
+              y="65"
+              width="140"
+              height="60"
+              rx="4"
+              fill="#eef5f3"
+              stroke="#1f6f63"
+            />
+            <text
+              x="630"
+              y="90"
+              text-anchor="middle"
+              fill="#1f6f63"
+              font-family="Inter, sans-serif"
+              font-size="12"
+              font-weight="600"
+            >
+              Lista adulterada
+            </text>
+            <text
+              x="630"
+              y="107"
+              text-anchor="middle"
+              fill="#3f8478"
+              font-family="Inter, sans-serif"
+              font-size="11"
+            >
+              "tudo limpo"
+            </text>
+
+            <path
+              d="M160 90 L220 90 L220 50 L286 50"
+              stroke="#9aa2b1"
+              stroke-width="1"
+              fill="none"
+              marker-end="url(#arrow2)"
+            />
+            <path
+              d="M220 90 L220 140 L286 140"
+              stroke="#9aa2b1"
+              stroke-width="1"
+              fill="none"
+            />
+            <path
+              d="M440 50 Q 500 50 500 90 L556 90"
+              stroke="#9aa2b1"
+              stroke-width="1"
+              fill="none"
+              marker-end="url(#arrow2)"
+            />
+            <path
+              d="M440 140 Q 500 140 500 100"
+              stroke="#9aa2b1"
+              stroke-width="1"
+              fill="none"
+            />
+
+            <defs>
+              <marker
+                id="arrow2"
+                markerWidth="8"
+                markerHeight="8"
+                refX="6"
+                refY="4"
+                orient="auto"
+              >
+                <path d="M0,0 L8,4 L0,8 Z" fill="#9aa2b1" />
+              </marker>
+            </defs>
+          </svg>
+          <figcaption>
+            Fig. 1 — o kernel processa a chamada corretamente, mas a resposta é
+            filtrada pelo rootkit antes de chegar ao administrador.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section id="referencias">
+        <h2>Referências</h2>
+        <ul class="refs">
+          <li>
+            NIST Computer Security Resource Center (CSRC). <em>Glossary</em>.
+            <a
+              href="https://csrc.nist.gov/glossary/"
+              target="_blank"
+              rel="noopener"
+              >csrc.nist.gov/glossary</a
+            >
+          </li>
+          <li>
+            NIST. <em>Glossary of Key Information Security Terms</em>, NISTIR
+            7298 Rev. 2.
+            <a
+              href="https://nvlpubs.nist.gov/nistpubs/ir/2013/nist.ir.7298r2.pdf"
+              target="_blank"
+              rel="noopener"
+              >nvlpubs.nist.gov</a
+            >
+          </li>
+          <li>
+            MITRE ATT&amp;CK. <em>Rootkit — T1014</em>.
+            <a
+              href="https://attack.mitre.org/techniques/T1014/"
+              target="_blank"
+              rel="noopener"
+              >attack.mitre.org/techniques/T1014</a
+            >
+          </li>
+          <li>
+            MITRE ATT&amp;CK. <em>Software</em>.
+            <a
+              href="https://attack.mitre.org/software/"
+              target="_blank"
+              rel="noopener"
+              >attack.mitre.org/software</a
+            >
+          </li>
+          <li>
+            Relatório técnico interno da dupla —
+            <em>Análise Abrangente de Rootkits e Bootkits</em> (seções 2, 3, 6,
+            7 e 9).
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        Dupla 06, Cibersegurança — Ameaça 1: Rootkit. Comparar com
+        <a href="bootkit.html">bootkit</a>.
+        <a href="../index.html">Voltar ao Atlas</a>.
+      </p>
+    </footer>
+  </body>
+</html>

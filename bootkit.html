@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bootkit — Atlas de Ameaças Cibernéticas</title>
+    <meta
+      name="description"
+      content="O que é um bootkit, como ele compromete o processo de inicialização, exemplos reais como o BlackLotus, e como detectar, prevenir e responder a esse tipo de ataque."
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+
+  <body>
+    <div class="accent-bar"></div>
+    <header class="site-header">
+      <a class="brand" href="../index.html">Atlas de Ameaças Cibernéticas</a>
+      <nav aria-label="Ameaças da dupla 06">
+        <a href="rootkit.html">Rootkit</a>
+        <a href="bootkit.html" aria-current="page">Bootkit</a>
+      </nav>
+    </header>
+
+    <header class="hero">
+      <span class="badge">Dupla 06 — Ameaça 2</span>
+      <h1>Bootkit</h1>
+      <p class="lede">
+        O malware que assume o controle da máquina antes mesmo de o sistema
+        operacional acordar.
+      </p>
+      <p class="see-also">
+        Compare com o <a href="rootkit.html">rootkit</a>, a primeira ameaça da
+        dupla.
+      </p>
+
+      <nav class="quicknav" aria-label="Nesta página">
+        <a href="#conceito">Conceito</a>
+        <a href="#historico">Histórico</a>
+        <a href="#funcionamento">Funcionamento</a>
+        <a href="#vetores">Vetores</a>
+        <a href="#impactos">Impactos</a>
+        <a href="#deteccao">Detecção</a>
+        <a href="#exemplo">Exemplo real</a>
+        <a href="#prevencao">Prevenção</a>
+        <a href="#resposta">Resposta</a>
+        <a href="#diagrama">Diagrama</a>
+        <a href="#referencias">Referências</a>
+      </nav>
+    </header>
+
+    <main>
+      <section id="conceito">
+        <h2>O que é um bootkit</h2>
+        <p>
+          Um <strong>bootkit</strong> é uma categoria avançada de rootkit
+          voltada a comprometer os mecanismos de inicialização do computador — o
+          <em>Master Boot Record</em> (MBR), o
+          <em>Volume Boot Record</em> (VBR), os carregadores de boot ou o
+          próprio firmware (UEFI/BIOS).
+        </p>
+        <p>
+          O que o torna especialmente perigoso não é apenas onde ele se instala,
+          mas <strong>quando</strong> ele age: antes de o sistema operacional
+          carregar. Isso significa que o bootkit executa seu código antes de
+          qualquer antivírus, EDR ou defesa nativa entrar em cena — ele tem a
+          primeira palavra, e pode decidir o que o resto do sistema vai "ver" a
+          partir daí.
+        </p>
+      </section>
+
+      <section id="historico">
+        <h2>Da BIOS ao firmware: uma linha do tempo</h2>
+        <ul class="timeline">
+          <li>
+            <span class="year">Anos 2000</span>
+            <p>
+              Rootkits migram do espaço do usuário para o kernel. Surgem os
+              primeiros bootkits, atacando diretamente o MBR — tornando a
+              limpeza por antivírus tradicionais praticamente inútil, já que o
+              malware age antes deles.
+            </p>
+          </li>
+          <li>
+            <span class="year">2018 — LoJax</span>
+            <p>
+              Primeiro bootkit de firmware UEFI identificado em uma operação
+              real de espionagem, atribuído ao grupo APT28.
+            </p>
+          </li>
+          <li>
+            <span class="year">2022–2023 — BlackLotus</span>
+            <p>
+              Bootkit UEFI capaz de contornar o Secure Boot mesmo em Windows 10
+              e 11 atualizados, explorando a falha conhecida como
+              <em>Baton Drop</em>.
+            </p>
+          </li>
+          <li>
+            <span class="year">2024–2025 — CVE-2024-7344</span>
+            <p>
+              Vulnerabilidade encontrada em uma aplicação UEFI assinada pela
+              própria Microsoft, usada como porta de entrada para bootkits como
+              o Bootkitty.
+            </p>
+          </li>
+        </ul>
+      </section>
+
+      <section id="funcionamento">
+        <h2>Como o bootkit assume o controle</h2>
+        <p class="dim">
+          O ataque se desenrola em uma cadeia curta, mas decisiva — cada etapa
+          acontece antes que a anterior tenha chance de ser auditada.
+        </p>
+        <ol class="steps">
+          <li>
+            <strong>Energização da máquina</strong>O firmware UEFI (ou a BIOS,
+            em máquinas mais antigas) assume o controle inicial do hardware.
+          </li>
+          <li>
+            <strong>Verificação de assinatura</strong>O Secure Boot deveria
+            validar cada componente antes de deixá-lo executar — essa validação
+            é exatamente o elo que o bootkit tenta quebrar.
+          </li>
+          <li>
+            <strong>Injeção do código malicioso</strong>Explorando uma falha de
+            validação ou um driver vulnerável já presente no firmware, o bootkit
+            insere seu próprio código na cadeia de boot.
+          </li>
+          <li>
+            <strong>Handoff comprometido</strong>O controle passa ao carregador
+            do sistema operacional, mas agora sob supervisão do atacante.
+          </li>
+          <li>
+            <strong>Desativação de defesas nativas</strong>Com esse nível de
+            privilégio, o bootkit consegue desligar mecanismos como BitLocker,
+            HVCI (integridade de código protegida por hipervisor) e o próprio
+            antivírus — antes que eles sequer inicializem.
+          </li>
+          <li>
+            <strong>Persistência</strong>Como o código malicioso vive no
+            firmware ou nos setores de boot, ele sobrevive a reinicializações e,
+            em muitos casos, até a uma formatação completa do disco.
+          </li>
+        </ol>
+      </section>
+
+      <section id="vetores">
+        <h2>Como ele chega até a máquina</h2>
+        <p>
+          Comprometer o firmware raramente é o primeiro passo de um ataque —
+          normalmente é a etapa final de uma cadeia que começou de forma mais
+          comum:
+        </p>
+        <ul>
+          <li>
+            <strong>Phishing e engenharia social:</strong> um anexo ou
+            instalador malicioso abre a porta para uma exploração posterior mais
+            profunda.
+          </li>
+          <li>
+            <strong>Exploração de vulnerabilidades:</strong> falhas em sistemas
+            ou aplicações desatualizadas dão ao atacante o acesso privilegiado
+            necessário para tocar no firmware.
+          </li>
+          <li>
+            <strong>Ataques à cadeia de suprimentos:</strong> dependências ou
+            pacotes de software adulterados entregam o payload sem que o usuário
+            perceba.
+          </li>
+          <li>
+            <strong>Dispositivos USB infectados</strong> deixados
+            propositalmente em locais públicos ou corporativos.
+          </li>
+          <li>
+            <strong>Softwares piratas e ativadores "cracked"</strong>, uma das
+            portas de entrada mais comuns para usuários domésticos.
+          </li>
+        </ul>
+      </section>
+
+      <section id="impactos">
+        <h2>O que está em jogo</h2>
+        <p>
+          Um bootkit não rouba só dados — ele corrompe a própria base sobre a
+          qual todas as outras defesas do sistema se apoiam.
+        </p>
+        <div class="pillars">
+          <div class="pillar">
+            <h4>Confidencialidade</h4>
+            <p>
+              Credenciais, chaves e teclas digitadas podem ser capturadas
+              silenciosamente antes de qualquer proteção entrar em ação.
+            </p>
+          </div>
+          <div class="pillar">
+            <h4>Integridade</h4>
+            <p>
+              O sistema passa a reportar informações falsas sobre si mesmo —
+              processos, arquivos e configurações adulterados sem deixar rastro
+              visível.
+            </p>
+          </div>
+          <div class="pillar">
+            <h4>Disponibilidade</h4>
+            <p>
+              O acesso persistente pode ser usado para implantar ransomware ou
+              incluir a máquina em uma botnet, comprometendo sua operação
+              normal.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="deteccao">
+        <h2>Sinais que podem indicar comprometimento</h2>
+        <div class="panel defense">
+          <span class="label">Indicadores de detecção</span>
+          <ul style="margin-bottom: 0">
+            <li>
+              Problemas de segurança que
+              <strong
+                >persistem mesmo após reinstalar o sistema operacional</strong
+              >
+              — o sinal mais característico de um bootkit.
+            </li>
+            <li>
+              Varreduras antimalware executadas <strong>fora</strong> do
+              ambiente potencialmente infectado (boot offline) encontram
+              inconsistências que o sistema em uso não reporta.
+            </li>
+            <li>
+              Análise forense de memória RAM revelando módulos, ganchos
+              (<em>hooks</em>) ou callbacks não explicados.
+            </li>
+            <li>
+              Alertas de firmware relacionados à validação do Secure Boot ou a
+              listas de revogação de assinatura (DBX) desatualizadas.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="exemplo">
+        <h2>Estudo de caso: BlackLotus</h2>
+        <p>
+          Identificado em 2022 e detalhado publicamente em 2023, o
+          <strong>BlackLotus</strong> foi o primeiro bootkit UEFI conhecido
+          capaz de contornar o Secure Boot em versões atualizadas do Windows 10
+          e 11 — mesmo com todas as correções de segurança disponíveis
+          instaladas.
+        </p>
+        <p>
+          Ele explorava uma vulnerabilidade já conhecida (apelidada de
+          <em>Baton Drop</em>) em um componente de boot legítimo e assinado
+          digitalmente, contornando assim a proteção sem precisar de uma
+          assinatura falsificada. Uma vez ativo, desligava o BitLocker e o
+          Windows Defender antes de o sistema operacional sequer terminar de
+          carregar, garantindo persistência mesmo diante de reinstalações
+          comuns.
+        </p>
+        <p class="dim">
+          O caso ilustra por que "manter o Windows atualizado" não é suficiente
+          sozinho: a vulnerabilidade explorada estava em uma camada — o firmware
+          — que os updates convencionais de sistema operacional não alcançam sem
+          uma atualização de revogação (DBX) específica.
+        </p>
+      </section>
+
+      <section id="prevencao">
+        <h2>Como reduzir o risco</h2>
+        <ul>
+          <li>
+            Manter o <strong>Secure Boot ativado</strong> e aplicar as
+            atualizações de revogação de assinatura (DBX) publicadas pelos
+            fabricantes.
+          </li>
+          <li>
+            Manter firmware e sistema operacional atualizados — a defesa contra
+            bootkits depende de duas camadas de patch, não só uma.
+          </li>
+          <li>
+            Aplicar o <strong>princípio do menor privilégio</strong> e
+            autenticação multifator, dificultando o acesso administrativo que
+            costuma preceder um ataque de firmware.
+          </li>
+          <li>
+            Desativar a execução automática (<em>autorun</em>) de mídias USB em
+            ambientes corporativos.
+          </li>
+          <li>
+            Evitar instaladores piratas ou "ativadores" de software, uma das
+            portas de entrada mais comuns para esse tipo de ameaça.
+          </li>
+        </ul>
+      </section>
+
+      <section id="resposta">
+        <h2>Se o pior acontecer</h2>
+        <div class="panel threat">
+          <span class="label">Resposta a incidente</span>
+          <p>
+            <strong>Isolar a máquina da rede imediatamente</strong> e preservar
+            a memória RAM antes de desligar ou reiniciar, para viabilizar a
+            análise forense.
+          </p>
+          <p>
+            Se a infecção for confirmada no nível de firmware, uma reinstalação
+            comum do sistema operacional <strong>não resolve</strong> — é
+            necessário regravar o firmware UEFI/BIOS com uma versão limpa
+            fornecida pelo fabricante ou, em último caso, substituir o
+            componente fisicamente.
+          </p>
+          <p style="margin-bottom: 0">
+            A reinstalação do sistema a partir de mídia externa confiável só
+            deve ocorrer depois que a camada de firmware estiver comprovadamente
+            limpa.
+          </p>
+        </div>
+      </section>
+
+      <section id="diagrama">
+        <h2>A cadeia de boot comprometida</h2>
+        <figure>
+          <svg
+            viewBox="0 0 720 220"
+            xmlns="http://www.w3.org/2000/svg"
+            role="img"
+            aria-labelledby="diagTitle diagDesc"
+          >
+            <title id="diagTitle">
+              Diagrama da cadeia de boot comprometida por um bootkit
+            </title>
+            <desc id="diagDesc">
+              Quatro estágios em sequência: firmware UEFI, injeção do bootkit
+              rompendo o Secure Boot, carregamento do kernel com defesas
+              desativadas, e sistema operacional sob controle do atacante.
+            </desc>
+
+            <!-- linha guia -->
+            <line
+              x1="70"
+              y1="60"
+              x2="650"
+              y2="60"
+              stroke="#dfe2e8"
+              stroke-width="1"
+            />
+
+            <!-- estagio 1 -->
+            <rect
+              x="20"
+              y="30"
+              width="140"
+              height="60"
+              rx="4"
+              fill="#ffffff"
+              stroke="#dfe2e8"
+            />
+            <text
+              x="90"
+              y="55"
+              text-anchor="middle"
+              fill="#16181d"
+              font-family="Inter, sans-serif"
+              font-size="12"
+              font-weight="600"
+            >
+              Firmware
+            </text>
+            <text
+              x="90"
+              y="72"
+              text-anchor="middle"
+              fill="#5b6472"
+              font-family="Inter, sans-serif"
+              font-size="11"
+            >
+              UEFI / BIOS
+            </text>
+
+            <!-- estagio 2 -->
+            <rect
+              x="210"
+              y="30"
+              width="150"
+              height="60"
+              rx="4"
+              fill="#fbf0ed"
+              stroke="#b3492f"
+            />
+            <text
+              x="285"
+              y="50"
+              text-anchor="middle"
+              fill="#b3492f"
+              font-family="Inter, sans-serif"
+              font-size="11"
+              font-weight="600"
+            >
+              Injeção do bootkit
+            </text>
+            <text
+              x="285"
+              y="66"
+              text-anchor="middle"
+              fill="#b3492f"
+              font-family="Inter, sans-serif"
+              font-size="11"
+            >
+              Secure Boot rompido
+            </text>
+            <text
+              x="285"
+              y="82"
+              text-anchor="middle"
+              fill="#c17155"
+              font-family="Inter, sans-serif"
+              font-size="10"
+            >
+              antes do handoff ao SO
+            </text>
+
+            <!-- estagio 3 -->
+            <rect
+              x="410"
+              y="30"
+              width="150"
+              height="60"
+              rx="4"
+              fill="#ffffff"
+              stroke="#dfe2e8"
+            />
+            <text
+              x="485"
+              y="50"
+              text-anchor="middle"
+              fill="#16181d"
+              font-family="Inter, sans-serif"
+              font-size="11"
+              font-weight="600"
+            >
+              Kernel carrega
+            </text>
+            <text
+              x="485"
+              y="66"
+              text-anchor="middle"
+              fill="#5b6472"
+              font-family="Inter, sans-serif"
+              font-size="10"
+            >
+              BitLocker / HVCI / AV
+            </text>
+            <text
+              x="485"
+              y="82"
+              text-anchor="middle"
+              fill="#5b6472"
+              font-family="Inter, sans-serif"
+              font-size="10"
+            >
+              já desativados
+            </text>
+
+            <!-- estagio 4 -->
+            <rect
+              x="590"
+              y="30"
+              width="110"
+              height="60"
+              rx="4"
+              fill="#eef5f3"
+              stroke="#1f6f63"
+            />
+            <text
+              x="645"
+              y="55"
+              text-anchor="middle"
+              fill="#1f6f63"
+              font-family="Inter, sans-serif"
+              font-size="11"
+              font-weight="600"
+            >
+              SO ativo
+            </text>
+            <text
+              x="645"
+              y="72"
+              text-anchor="middle"
+              fill="#3f8478"
+              font-family="Inter, sans-serif"
+              font-size="10"
+            >
+              sob controle
+            </text>
+
+            <!-- setas -->
+            <path
+              d="M160 60 L206 60"
+              stroke="#9aa2b1"
+              stroke-width="1"
+              marker-end="url(#arrow)"
+            />
+            <path
+              d="M360 60 L406 60"
+              stroke="#9aa2b1"
+              stroke-width="1"
+              marker-end="url(#arrow)"
+            />
+            <path
+              d="M560 60 L586 60"
+              stroke="#9aa2b1"
+              stroke-width="1"
+              marker-end="url(#arrow)"
+            />
+
+            <defs>
+              <marker
+                id="arrow"
+                markerWidth="8"
+                markerHeight="8"
+                refX="6"
+                refY="4"
+                orient="auto"
+              >
+                <path d="M0,0 L8,4 L0,8 Z" fill="#9aa2b1" />
+              </marker>
+            </defs>
+
+            <text
+              x="360"
+              y="140"
+              text-anchor="middle"
+              fill="#9aa2b1"
+              font-family="Inter, sans-serif"
+              font-size="11"
+            >
+              quanto mais cedo na cadeia o atacante age, mais camadas de defesa
+              ele evita
+            </text>
+            <line
+              x1="20"
+              y1="165"
+              x2="700"
+              y2="165"
+              stroke="#e6e8ec"
+              stroke-width="1"
+            />
+            <text
+              x="360"
+              y="195"
+              text-anchor="middle"
+              fill="#5b6472"
+              font-family="Inter, sans-serif"
+              font-size="10"
+            >
+              antivírus e EDR tradicionais só entram em cena depois do estágio 3
+              — tarde demais
+            </text>
+          </svg>
+          <figcaption>
+            Fig. 1 — cada estágio comprometido reduz a chance de as defesas
+            nativas serem carregadas de forma íntegra
+          </figcaption>
+        </figure>
+      </section>
+
+      <section id="referencias">
+        <h2>Referências</h2>
+        <ul class="refs">
+          <li>
+            NIST Computer Security Resource Center (CSRC). <em>Glossary</em>.
+            <a
+              href="https://csrc.nist.gov/glossary/"
+              target="_blank"
+              rel="noopener"
+              >csrc.nist.gov/glossary</a
+            >
+          </li>
+          <li>
+            NIST. <em>Glossary of Key Information Security Terms</em>, NISTIR
+            7298 Rev. 2.
+            <a
+              href="https://nvlpubs.nist.gov/nistpubs/ir/2013/nist.ir.7298r2.pdf"
+              target="_blank"
+              rel="noopener"
+              >nvlpubs.nist.gov</a
+            >
+          </li>
+          <li>
+            MITRE ATT&amp;CK. <em>Enterprise Techniques</em>.
+            <a
+              href="https://attack.mitre.org/techniques/"
+              target="_blank"
+              rel="noopener"
+              >attack.mitre.org/techniques</a
+            >
+          </li>
+          <li>
+            MITRE ATT&amp;CK. <em>Software</em>.
+            <a
+              href="https://attack.mitre.org/software/"
+              target="_blank"
+              rel="noopener"
+              >attack.mitre.org/software</a
+            >
+          </li>
+          <li>
+            Relatório técnico interno da dupla —
+            <em>Análise Abrangente de Rootkits e Bootkits</em> (seções 2, 3, 6 e
+            9).
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        Dupla 06, Cibersegurança — Ameaça 2: Bootkit. Comparar com
+        <a href="rootkit.html">rootkit</a>.
+        <a href="../index.html">Voltar ao Atlas</a>.
+      </p>
+    </footer>
+  </body>
+</html>
