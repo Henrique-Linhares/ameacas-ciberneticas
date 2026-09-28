@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    Atlas de Ameaças Cibernéticas — Dupla 06
    Identidade visual: prancha de desenho técnico.
    Um bootkit vive no firmware — no hardware, não no software —
@@ -46,27 +46,18 @@
 
 html {
   scroll-behavior: smooth;
+  font-size: 130%; /* Aumenta a base para projetor */
 }
 
 body {
   margin: 0;
-  background:
-    repeating-linear-gradient(
-      0deg,
-      var(--paper-line-soft) 0 1px,
-      transparent 1px 42px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      var(--paper-line-soft) 0 1px,
-      transparent 1px 42px
-    ),
-    var(--paper);
-  color: var(--ink);
+  background: var(--bg);
+  color: var(--text);
   font-family: var(--sans);
-  font-size: 17px;
-  line-height: 1.65;
+  font-size: 1.15rem; /* Fonte maior para legibilidade em projeção */
+  line-height: 1.7;
   -webkit-font-smoothing: antialiased;
+  animation: fadeIn 0.8s ease-out;
 }
 
 a {
@@ -109,7 +100,7 @@ svg {
 }
 
 .topbar a:hover {
-  color: var(--ink);
+  color: var(--text);
 }
 
 .topbar .path span {
@@ -180,7 +171,7 @@ svg {
 }
 
 .tb-stamp td {
-  color: var(--ink);
+  color: var(--text);
 }
 
 @media (max-width: 640px) {
@@ -228,7 +219,7 @@ section > h2 {
   font-size: 1.3rem;
   font-weight: 600;
   margin: 0 0 1.1rem;
-  color: var(--ink);
+  color: var(--text);
   display: inline-block;
   padding-bottom: 0.35rem;
   border-bottom: 1px solid var(--paper-line);
@@ -239,12 +230,12 @@ h3 {
   font-size: 1.02rem;
   font-weight: 600;
   margin: 1.6rem 0 0.5rem;
-  color: var(--ink);
+  color: var(--text);
 }
 
 p {
   margin: 0 0 1rem;
-  color: var(--ink);
+  color: var(--text);
 }
 
 p.dim {
@@ -262,7 +253,7 @@ li {
 }
 
 strong {
-  color: var(--ink);
+  color: var(--text);
   font-weight: 600;
 }
 
@@ -294,7 +285,7 @@ strong {
   top: 0.35rem;
   width: 0.4rem;
   height: 0.4rem;
-  background: var(--paper);
+  background: var(--bg);
   border: 1.5px solid var(--ink-dim);
   transform: rotate(45deg);
 }
@@ -355,7 +346,7 @@ strong {
   top: -0.65rem;
   left: 1rem;
   padding: 0 0.5rem;
-  background: var(--paper);
+  background: var(--bg);
   font-family: var(--mono);
   font-size: 0.72rem;
   letter-spacing: 0.02em;
@@ -540,6 +531,7 @@ footer a:hover {
 
 html {
   scroll-behavior: smooth;
+  font-size: 130%; /* Aumenta a base para projetor */
 }
 
 body {
@@ -547,9 +539,10 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--sans);
-  font-size: 17px;
-  line-height: 1.65;
+  font-size: 1.15rem; /* Fonte maior para legibilidade em projeção */
+  line-height: 1.7;
   -webkit-font-smoothing: antialiased;
+  animation: fadeIn 0.8s ease-out;
 }
 
 a {
@@ -855,6 +848,7 @@ strong {
 
 html {
   scroll-behavior: smooth;
+  font-size: 130%; /* Aumenta a base para projetor */
 }
 
 body {
@@ -862,9 +856,10 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--sans);
-  font-size: 17px;
-  line-height: 1.65;
+  font-size: 1.15rem; /* Fonte maior para legibilidade em projeção */
+  line-height: 1.7;
   -webkit-font-smoothing: antialiased;
+  animation: fadeIn 0.8s ease-out;
 }
 
 a {
@@ -1306,3 +1301,34 @@ footer a {
 footer a:hover {
   color: var(--accent);
 }
+
+
+/* ---------- animações para apresentação ---------- */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hero > * {
+  animation: slideUpFade 0.6s ease-out backwards;
+}
+.hero .badge { animation-delay: 0.1s; }
+.hero h1 { animation-delay: 0.2s; }
+.hero .lede { animation-delay: 0.3s; }
+.hero .see-also { animation-delay: 0.4s; }
+.hero .quicknav { animation-delay: 0.5s; }
+
+
+
+.site-header {
+  animation: slideUpFade 0.5s ease-out;
+}
+
+
+

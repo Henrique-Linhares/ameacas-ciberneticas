@@ -1,0 +1,82 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Desafio do Analista — Atlas de Ameaças</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <style>
+      .hidden-answer {
+        display: none;
+        margin-top: 1.5rem;
+        animation: slideUpFade 0.5s ease-out;
+      }
+      .btn-reveal {
+        background: var(--text);
+        color: var(--bg);
+        border: none;
+        padding: 0.8rem 1.5rem;
+        font-size: 1rem;
+        font-family: var(--sans);
+        font-weight: 600;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-top: 1rem;
+        transition: transform 0.2s;
+      }
+      .btn-reveal:hover {
+        transform: scale(1.05);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="accent-bar"></div>
+    <header class="site-header">
+      <a class="brand" href="../index.html">Atlas de Ameaças Cibernéticas</a>
+      <nav aria-label="Ameaças da dupla 06">
+        <a href="rootkit.html">Rootkit</a>
+        <a href="bootkit.html">Bootkit</a>
+        <a href="desafio.html" aria-current="page">Desafio</a>
+      </nav>
+    </header>
+
+    <main style="padding-top: 2rem;">
+      <header class="hero" style="padding-bottom: 1rem;">
+        <span class="badge">Atividade Interativa da Apresentação</span>
+        <h1>Desafio do Analista</h1>
+        <p class="lede">
+          Leiam o cenário de incidente abaixo e tentem descobrir: fomos infectados por um Rootkit ou um Bootkit?
+        </p>
+      </header>
+
+      <section>
+        <div class="panel threat" style="padding: 1.5rem; border-left-width: 5px;">
+          <span class="label" style="font-size: 1rem; margin-bottom: 1rem;">O Incidente (Relato do SOC)</span>
+          <p>Um servidor web essencial da nossa empresa começou a apresentar extrema lentidão e nossos firewalls de borda detectaram tráfego de rede incomum saindo dele durante a madrugada.</p>
+          <p>O analista de plantão acessou o servidor e executou ferramentas padrão de diagnóstico como <code>netstat</code> (para ver a rede) e <code>ps</code> (para ver processos). <strong>O resultado: nada!</strong> O sistema reportou que não havia conexões estranhas nem processos consumindo CPU.</p>
+          <p>Desconfiado, o analista desligou a máquina, plugou um <em>Pendrive Live (com um sistema operacional limpo externo)</em> e iniciou a máquina por ele. Ao investigar o disco do servidor "por fora", ele encontrou um diretório oculto cheio de scripts maliciosos de mineração e configurações de rede adulteradas.</p>
+        </div>
+        
+        <h3 style="margin-top: 2rem; font-size: 1.3rem;">Pergunta para a turma:</h3>
+        <p>Por que as ferramentas de diagnóstico originais mentiram para o analista? Qual das duas ameaças explica melhor esse comportamento de ocultação profunda?</p>
+
+        <button class="btn-reveal" onclick="document.getElementById('resposta').style.display='block'; this.style.display='none';">Revelar Resposta</button>
+
+        <div id="resposta" class="hidden-answer panel defense" style="padding: 1.5rem; border-left-width: 5px;">
+          <span class="label" style="font-size: 1rem;">Resposta e Justificativa</span>
+          <h3 style="margin-top: 0; color: var(--accent);">É um Rootkit!</h3>
+          <p>A característica principal que define este incidente é a <strong>subversão do Sistema Operacional (hooking)</strong>. O malware interceptou as chamadas das ferramentas legítimas (<code>netstat</code>, <code>ps</code>, etc.) no nível do kernel e filtrou as informações para se esconder e mentir para o administrador.</p>
+          <p>O analista só conseguiu ver a verdade quando contornou o sistema operacional comprometido, usando um sistema limpo (Pendrive Live). Se o ataque inicial tivesse modificado a placa-mãe (UEFI/BIOS) para comprometer a máquina antes mesmo do boot, teríamos como principal suspeito um <strong>Bootkit</strong> (que muitas vezes acaba instalando um rootkit, mas tem um vetor de persistência muito mais profundo e ligado ao hardware/inicialização).</p>
+        </div>
+      </section>
+    </main>
+
+    <footer style="margin-top: 2rem;">
+      <p>
+        Dupla 06, Cibersegurança.
+        <a href="../index.html">Voltar ao Atlas</a>.
+      </p>
+    </footer>
+  </body>
+</html>
